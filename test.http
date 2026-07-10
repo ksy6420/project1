@@ -1,0 +1,17 @@
+### 로그인 요청 테스트
+POST http://localhost:3000/api/v2/auth/login
+Content-Type: application/json
+
+{
+    "user_id": "admin01",
+    "password": "1234"
+}
+
+### 토큰 재발급 테스트 (Silent Refresh)
+# 아래 refreshToken 값에 로그인 성공 후 받은 실제 토큰 문자열을 넣어서 테스트합니다.
+POST http://localhost:3000/api/v2/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJhZG1pbjAxIiwiaWF0IjoxNzgzMzAxNTY2LCJleHAiOjE3ODM5MDYzNjZ9.oHiCF9bAPyM8qUgbbHu4z3vKtH5upedK8ukl-me_s9Q"
+}

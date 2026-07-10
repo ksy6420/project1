@@ -1,0 +1,12 @@
+◇ injected env (7) from .env // tip: ⌘ suppress logs { quiet: true }
+DB 연결 테스트 중...
+DB 연결 성공
+[DB] ip_check_history 테이블 확인 완료
+[Restore] reports 복원 시작 (스트림 처리)...
+[Restore] 0개 records reports 배열 복원 완료
+[DB] ip_abuse_json 컬럼 확인 완료
+[DB] blacklist_snapshot 초기 데이터 마이그레이션 완료
+[DB] blacklist_snapshot 테이블 확인 완료
+ API 서버가 구동되었습니다. (Port: 3000)
+Swagger 문서: http://localhost:3000/api-docs
+로그인 요청 수신: { user_id: 'admin@01', password: '1234' }

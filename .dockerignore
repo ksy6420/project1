@@ -1,0 +1,11 @@
+node_modules
+frontend/node_modules
+frontend/dist
+.git
+.env
+server_error.txt
+server_output.txt
+_check.js
+import_json_table.js
+test.http
+*.md
