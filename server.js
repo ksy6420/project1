@@ -84,7 +84,7 @@ const swaggerSpec = {
   servers: [
     {
       url: `http://localhost:${process.env.PORT || 3000}`,
-      description: '로컬 개발 서버',
+      description: 'API 서버',
     },
   ],
   components: {
@@ -534,14 +534,15 @@ app.get('/{*splat}', (req, res) => {
 
 // 서버 시작
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 testDBConnection().then(async () => {
   await ensureHistoryTable(pool);
   await ensureBlacklistTable(pool);
   await ensureBlacklistDailyTable(pool);
 
-  app.listen(PORT, () => {
-    console.log(`[Server] 포트 ${PORT}에서 실행 중`);
+  app.listen(PORT, HOST, () => {
+    console.log(`[Server] ${HOST}:${PORT}에서 실행 중`);
   });
 
   scheduleDailyBlacklistFetch(pool);
