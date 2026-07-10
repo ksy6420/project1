@@ -285,6 +285,166 @@ const swaggerSpec = {
         },
       },
     },
+    '/api/v2/ip/history': {
+      get: {
+        summary: 'IP 검색 이력 날짜별 조회',
+        description:
+          '특정 날짜의 IP 검색 이력을 조회합니다.',
+        tags: ['IP History'],
+        parameters: [
+          {
+            name: 'date',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date' },
+            description: '조회할 날짜 (YYYY-MM-DD)',
+            example: '2026-07-10',
+          },
+        ],
+        responses: {
+          200: {
+            description: '이력 조회 성공',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          ip: { type: 'string' },
+                          checkedAt: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: '날짜 누락' },
+          500: { description: '서버 내부 오류' },
+        },
+      },
+    },
+    '/api/v2/ip/blacklist': {
+      get: {
+        summary: '블랙리스트 날짜별 조회 (페이지네이션)',
+        description:
+          '특정 날짜의 블랙리스트 IP 목록을 페이지 단위로 조회합니다.',
+        tags: ['Blacklist'],
+        parameters: [
+          {
+            name: 'date',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date' },
+            description: '조회할 날짜 (YYYY-MM-DD)',
+            example: '2026-07-10',
+          },
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', default: 1 },
+            description: '페이지 번호',
+            example: 1,
+          },
+        ],
+        responses: {
+          200: {
+            description: '블랙리스트 조회 성공',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          ip: { type: 'string' },
+                          abuseConfidenceScore: { type: 'integer' },
+                          countryCode: { type: 'string' },
+                          countryName: { type: 'string' },
+                          isp: { type: 'string' },
+                          domain: { type: 'string' },
+                          totalReports: { type: 'integer' },
+                          lastReportedAt: { type: 'string' },
+                        },
+                      },
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer' },
+                        limit: { type: 'integer' },
+                        total: { type: 'integer' },
+                        totalPages: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: '날짜 누락' },
+          500: { description: '서버 내부 오류' },
+        },
+      },
+    },
+    '/api/v2/ip/blacklist/search': {
+      get: {
+        summary: '블랙리스트 IP 검색',
+        description:
+          '블랙리스트에서 특정 IP 주소를 검색하고 등록된 날짜 목록을 반환합니다.',
+        tags: ['Blacklist'],
+        parameters: [
+          {
+            name: 'ip',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: '검색할 IP 주소',
+            example: '1.1.220.166',
+          },
+          {
+            name: 'date',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'date' },
+            description: '특정 날짜 필터 (YYYY-MM-DD, 선택)',
+            example: '2026-07-10',
+          },
+        ],
+        responses: {
+          200: {
+            description: '검색 결과',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    found: { type: 'boolean' },
+                    dates: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    page: { type: 'integer' },
+                    totalPages: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'IP 주소 누락' },
+          500: { description: '서버 내부 오류' },
+        },
+      },
+    },
   },
 };
 
