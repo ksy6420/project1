@@ -352,7 +352,7 @@ async function ensureDailyPartitions(pool) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-    const lessThan = nextMonth.toISOString().slice(0, 10);
+    const lessThan = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
     const pName = 'p_' + y + '_' + m;
     try {
       await pool.execute(
@@ -384,7 +384,8 @@ async function fetchDailyBlacklist(pool) {
   }
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const [[{ cnt }]] = await pool.query(
       'SELECT COUNT(*) AS cnt FROM blacklist_daily WHERE snapshot_date = ?',
@@ -399,7 +400,7 @@ async function fetchDailyBlacklist(pool) {
     }
 
     const response = await axios.get(ABUSEIPDB_BLACKLIST_URL, {
-      params: { confidenceMinimum: 25, limit: 10000 },
+      params: { confidenceMinimum: 25, limit: parseInt(process.env.BLACKLIST_LIMIT, 10) || 500000 },
       headers: { Key: apiKey, Accept: 'application/json' },
       timeout: 30000,
     });
@@ -550,7 +551,7 @@ async function getHistoryByDate(pool, dateStr) {
   }
 }
 
-async function getBlacklistByDate(pool, dateStr, page = 1, limit = 50) {
+async function getBlacklistByDate(pool, dateStr, page = 1, limit = 200) {
   try {
     const offset = (page - 1) * limit;
     const [[{ total }]] = await pool.query(
@@ -586,8 +587,7 @@ async function getBlacklistByDate(pool, dateStr, page = 1, limit = 50) {
   }
 }
 
-async function searchIpInBlacklist(pool, ip, dateStr) {
-  const limit = 50;
+async function searchIpInBlacklist(pool, ip, dateStr, limit = 200) {
   try {
     const [allDateRows] = await pool.query(
       'SELECT DISTINCT snapshot_date FROM blacklist_daily WHERE ip_address = ? ORDER BY snapshot_date DESC',

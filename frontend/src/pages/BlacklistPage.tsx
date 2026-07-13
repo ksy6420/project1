@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Search,
-  Shield,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -28,7 +27,7 @@ interface Pagination {
 }
 
 export function BlacklistPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const dateParam = searchParams.get('date') || '';
   const ipParam = searchParams.get('ip') || '';
@@ -54,7 +53,7 @@ export function BlacklistPage() {
       setError('');
       try {
         const res = await axios.get(`${API_BASE_URL}/ip/blacklist`, {
-          params: { date: dateParam, page: pageParam },
+          params: { date: dateParam, page: pageParam, limit: 200 },
         });
         if (!cancelled) {
           setItems(res.data.data || []);
@@ -107,7 +106,7 @@ export function BlacklistPage() {
       let navigateUrl = `/blacklist?date=${dateValue}&page=1`;
       try {
         const res = await axios.get(`${API_BASE_URL}/ip/blacklist/search`, {
-          params: { ip, date: dateValue },
+          params: { ip, date: dateValue, limit: 200 },
         });
         if (res.data.found && res.data.page) {
           setIpSearchResult({ found: true, dates: res.data.dates });
@@ -138,13 +137,6 @@ export function BlacklistPage() {
     }
   };
 
-  const getScoreColor = (score?: number) => {
-    if (score == null) return 'text-gray-400';
-    if (score >= 75) return 'text-red-400';
-    if (score >= 25) return 'text-yellow-400';
-    return 'text-green-400';
-  };
-
   const formatDateRanges = (dates: string[]): string => {
     if (dates.length === 0) return '';
     const sorted = [...dates].sort();
@@ -171,7 +163,7 @@ export function BlacklistPage() {
   return (
     <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col font-sans">
       <Header />
-      <main className="flex-1 px-6 md:px-12 py-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
+      <main className="flex-1 px-4 md:px-8 py-6 max-w-7xl mx-auto w-full flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <input
@@ -240,44 +232,20 @@ export function BlacklistPage() {
 
         {!loading && !error && items.length > 0 && (
           <div className="flex flex-col gap-4">
-            <div className="space-y-2">
+            <div className="grid grid-cols-5 gap-1.5">
               {items.map((item) => (
                 <div
                   key={item.ip}
                   ref={(el) => {
                     itemRefs.current[item.ip] = el;
                   }}
-                  className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                  className={`px-2 py-2.5 rounded-md border font-mono text-center text-base transition-colors ${
                     ipParam === item.ip
-                      ? 'bg-blue-600/20 border-blue-500/60 ring-1 ring-blue-500/40'
-                      : 'bg-[#111827]/60 border-red-900/30 hover:border-red-700/40'
+                      ? 'bg-blue-600/20 border-blue-500/60 text-blue-200'
+                      : 'bg-[#111827]/60 border-gray-700/40 text-gray-200 hover:border-gray-600/60'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-4 h-4 text-red-500 shrink-0" />
-                    <div>
-                      <span className="text-sm font-mono font-semibold text-white">
-                        {item.ip}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-gray-400">
-                      {item.countryName || item.countryCode || '-'}
-                    </span>
-                    <span
-                      className={`font-bold ${getScoreColor(item.abuseConfidenceScore)}`}
-                    >
-                      {item.abuseConfidenceScore != null
-                        ? `${item.abuseConfidenceScore}%`
-                        : '-'}
-                    </span>
-                    <span className="text-[11px] text-gray-500">
-                      {item.lastReportedAt
-                        ? new Date(item.lastReportedAt).toLocaleString('ko-KR')
-                        : ''}
-                    </span>
-                  </div>
+                  {item.ip}
                 </div>
               ))}
             </div>

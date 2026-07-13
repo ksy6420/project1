@@ -3,6 +3,7 @@ dotenv.config();
 
 const express = require('express');
 const mysql = require('mysql2/promise');
+const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcryptjs'); // 비밀번호 해싱을 위한 bcrypt 모듈
@@ -654,13 +655,14 @@ app.get('/api/v2/ip/history', async (req, res) => {
 app.get('/api/v2/ip/blacklist', async (req, res) => {
   const date = req.query.date;
   const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 200;
   if (!date) {
     return res
       .status(400)
       .json({ message: '조회할 날짜를 입력해주세요. (YYYY-MM-DD)' });
   }
   try {
-    const result = await getBlacklistByDate(pool, date, page);
+    const result = await getBlacklistByDate(pool, date, page, limit);
     return res.json(result);
   } catch (error) {
     console.error('[Blacklist Error]:', error.message);
@@ -672,11 +674,12 @@ app.get('/api/v2/ip/blacklist', async (req, res) => {
 app.get('/api/v2/ip/blacklist/search', async (req, res) => {
   const ip = req.query.ip;
   const date = req.query.date;
+  const limit = parseInt(req.query.limit, 10) || 200;
   if (!ip) {
     return res.status(400).json({ message: '검색할 IP 주소를 입력해주세요.' });
   }
   try {
-    const result = await searchIpInBlacklist(pool, ip, date);
+    const result = await searchIpInBlacklist(pool, ip, date, limit);
     return res.json(result);
   } catch (error) {
     console.error('[Blacklist Search Error]:', error.message);
@@ -708,8 +711,65 @@ testDBConnection().then(async () => {
   scheduleDailyBlacklistFetch(pool);
 });
 
+async function catchUpMissingBlacklistDays(pool) {
+  try {
+    const today = new Date();
+    const dates = [];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    }
+    for (const dateStr of dates) {
+      const [[{ cnt }]] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM blacklist_daily WHERE snapshot_date = ?',
+        [dateStr],
+      );
+      if (cnt === 0) {
+        console.log('[Blacklist] ' + dateStr + ' 데이터 없음 → 패치 시도');
+        const result = await fetchDailyBlacklistForDate(pool, dateStr);
+        if (result > 0) console.log('[Blacklist] ' + dateStr + ' ' + result + '개 저장 완료');
+      }
+    }
+  } catch (err) {
+    console.error('[Blacklist] 캐치업 중 오류:', err.message);
+  }
+}
+
+async function fetchDailyBlacklistForDate(pool, dateStr) {
+  const apiKey = process.env.ABUSEIPDB_API_KEY;
+  if (!apiKey) return 0;
+  try {
+    const response = await axios.get('https://api.abuseipdb.com/api/v2/blacklist', {
+      params: { confidenceMinimum: 25, limit: parseInt(process.env.BLACKLIST_LIMIT, 10) || 500000 },
+      headers: { Key: apiKey, Accept: 'application/json' },
+      timeout: 30000,
+    });
+    const { data } = response.data;
+    if (!data || data.length === 0) return 0;
+    const placeholders = data.map(() => '(?, ?, ?)').join(',');
+    const flat = [];
+    for (const item of data) {
+      flat.push(dateStr, item.ipAddress, JSON.stringify(item));
+    }
+    await pool.query(
+      'INSERT IGNORE INTO blacklist_daily (snapshot_date, ip_address, json_data) VALUES ' + placeholders,
+      flat,
+    );
+    return data.length;
+  } catch (error) {
+    if (error.response && error.response.status === 429) {
+      console.error('[Blacklist] API 요청 한도를 초과했습니다.');
+    } else {
+      console.error('[Blacklist Fetch Error]', error.message);
+    }
+    return 0;
+  }
+}
+
 function scheduleDailyBlacklistFetch(pool) {
   fetchDailyBlacklist(pool);
+  catchUpMissingBlacklistDays(pool);
   const now = new Date();
   const tomorrow = new Date(
     now.getFullYear(),
