@@ -1,5 +1,5 @@
 import type { Report } from '../../types/threat';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface ReportListProps {
   reports: Report[];
@@ -50,6 +50,7 @@ export function ReportList({ reports }: ReportListProps) {
   const [expandedComments, setExpandedComments] = useState<Set<number>>(
     new Set(),
   );
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleComment = (idx: number) => {
     setExpandedComments((prev) => {
@@ -65,11 +66,13 @@ export function ReportList({ reports }: ReportListProps) {
     (reportPage - 1) * REPORTS_PER_PAGE,
     reportPage * REPORTS_PER_PAGE,
   );
-  const goReportPage = (p: number) =>
+  const goReportPage = (p: number) => {
     setReportPage(Math.max(1, Math.min(p, totalReportPages)));
+    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
-    <div className="bg-[#161D30] rounded-2xl border border-gray-800/80 p-7">
+    <div ref={containerRef} className="bg-[#161D30] rounded-2xl border border-gray-800/80 p-7">
       <div className="text-lg font-bold text-gray-200 uppercase tracking-wider mb-5 flex items-center gap-2.5">
         <span>신고 내역</span>
         <span className="text-sm bg-gray-800 text-gray-400 px-2.5 py-0.5 rounded-full font-normal">

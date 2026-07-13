@@ -77,10 +77,8 @@ export function Dashboard() {
   useEffect(() => {
     const ipFromUrl = searchParams.get('ip');
     if (ipFromUrl) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchIp(ipFromUrl);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get('ip')]);
 
   return (
@@ -101,7 +99,10 @@ export function Dashboard() {
         )}
 
         {currentResult ? (
-          <ScanResultView result={currentResult} rawData={rawData ?? undefined} />
+          <ScanResultView
+            result={currentResult}
+            rawData={rawData ?? undefined}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-20 border border-gray-800/40 rounded-xl bg-[#111827]/40">
             <div className="w-16 h-16 rounded-full bg-gray-800/40 flex items-center justify-center text-gray-500 mb-4 border border-gray-800/80"></div>

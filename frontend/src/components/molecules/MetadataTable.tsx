@@ -11,16 +11,22 @@ const LABEL_MAP: Record<string, string> = {
   isWhitelisted: '화이트리스트',
   abuseConfidenceScore: '악용 신뢰도',
   totalReports: '총 신고 횟수',
-  numDistinctUsers: '고유 신고자 수',
+  numDistinctUsers: '신고자 수',
   countryName: '국가',
   countryCode: '국가 코드',
   usageType: '사용 유형',
   isp: 'ISP',
   lastReportedAt: '최종 보고일',
-  requestTime: '요청 시간',
+  requestTime: 'API 요청 시간',
   isPublic: '공개 IP',
   isTor: 'Tor 노드',
   ipVersion: 'IP 버전',
+};
+
+const UNIT_MAP: Record<string, string> = {
+  abuseConfidenceScore: '%',
+  totalReports: '회',
+  numDistinctUsers: '명',
 };
 
 function formatValue(key: string, value: unknown): string {
@@ -29,7 +35,8 @@ function formatValue(key: string, value: unknown): string {
   }
   if (Array.isArray(value)) return value.join(', ') || '-';
   if (value === null || value === undefined) return '-';
-  return String(value);
+  const unit = UNIT_MAP[key];
+  return unit ? `${String(value)}${unit}` : String(value);
 }
 
 export function MetadataTable({ rawData }: MetadataTableProps) {
