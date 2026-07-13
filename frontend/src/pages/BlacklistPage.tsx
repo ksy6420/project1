@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import {
-  Calendar,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Calendar, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import axios from 'axios';
@@ -60,7 +55,8 @@ export function BlacklistPage() {
           setPagination(res.data.pagination || null);
         }
       } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -147,7 +143,8 @@ export function BlacklistPage() {
     for (let i = 1; i < sorted.length; i++) {
       const prevDate = new Date(prev);
       const currDate = new Date(sorted[i]);
-      const diff = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+      const diff =
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
       if (diff === 1) {
         prev = sorted[i];
       } else {

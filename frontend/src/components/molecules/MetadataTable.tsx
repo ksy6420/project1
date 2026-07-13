@@ -44,16 +44,15 @@ export function MetadataTable({ rawData }: MetadataTableProps) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        세부 메타데이터 상세 분석
-      </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-0">
         {rows.map((row, index) => (
           <div
             key={index}
             className="py-2.5 flex items-center justify-between gap-3 border-b border-gray-800/60"
           >
-            <span className="text-sm font-medium text-gray-400 shrink-0">{row.label}</span>
+            <span className="text-sm font-medium text-gray-400 shrink-0">
+              {row.label}
+            </span>
             <span className="text-sm font-semibold text-gray-200 text-right break-all ml-auto">
               {row.value}
             </span>
