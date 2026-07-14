@@ -1,3 +1,5 @@
+import { useTheme } from '../../context/ThemeContext';
+
 type RawData = Record<string, unknown>;
 
 interface MetadataTableProps {
@@ -40,6 +42,8 @@ function formatValue(key: string, value: unknown): string {
 }
 
 export function MetadataTable({ rawData }: MetadataTableProps) {
+  const { theme } = useTheme();
+
   const rows = rawData
     ? (Object.entries(rawData) as [string, unknown][])
         .filter(([key]) => key !== 'reports' && LABEL_MAP[key])
@@ -55,12 +59,20 @@ export function MetadataTable({ rawData }: MetadataTableProps) {
         {rows.map((row, index) => (
           <div
             key={index}
-            className="py-2.5 flex items-center justify-between gap-3 border-b border-gray-800/60"
+            className={`py-2.5 flex items-center justify-between gap-3 border-b transition-colors ${
+              theme === 'dark'
+                ? 'border-gray-800/60'
+                : 'border-gray-200'
+            }`}
           >
-            <span className="text-sm font-medium text-gray-400 shrink-0">
+            <span className={`text-sm font-medium shrink-0 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}>
               {row.label}
             </span>
-            <span className="text-sm font-semibold text-gray-200 text-right break-all ml-auto">
+            <span className={`text-sm font-semibold text-right break-all ml-auto ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+            }`}>
               {row.value}
             </span>
           </div>

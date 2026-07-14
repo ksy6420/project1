@@ -3,6 +3,7 @@ import { MetadataTable } from '../molecules/MetadataTable';
 import { GaugeBar } from '../molecules/GaugeBar';
 import { ReportList } from './ReportList';
 import { ShieldAlert, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface RawData {
   reports?: Report[];
@@ -16,6 +17,7 @@ interface ScanResultViewProps {
 
 export function ScanResultView({ result, rawData }: ScanResultViewProps) {
   const reports = rawData?.reports;
+  const { theme } = useTheme();
 
   const barColor =
     result.threatScore >= 75
@@ -33,7 +35,9 @@ export function ScanResultView({ result, rawData }: ScanResultViewProps) {
 
   return (
     <div className="flex flex-col gap-10 animate-fadeIn">
-      <div className={`bg-[#161D30] rounded-2xl border ${barBorder} p-7 shadow-lg`}>
+      <div className={`rounded-2xl border ${barBorder} p-7 shadow-lg transition-colors ${
+        theme === 'dark' ? 'bg-[#161D30]' : 'bg-white'
+      }`}>
         <div className="flex items-start md:items-center justify-between gap-6 mb-5">
           <div className="flex items-start md:items-center gap-5">
             <div
@@ -54,11 +58,15 @@ export function ScanResultView({ result, rawData }: ScanResultViewProps) {
               )}
             </div>
             <div>
-              <h3 className="font-extrabold text-xl md:text-2xl tracking-tight text-gray-100">
+              <h3 className={`font-extrabold text-xl md:text-2xl tracking-tight ${
+                theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+              }`}>
                 IP {result.ip}은 데이터베이스에
                 {result.isExternalFetch ? ' 없습니다' : ' 있습니다'}.
               </h3>
-              <p className="text-sm mt-1.5 text-gray-400 leading-relaxed font-medium">
+              <p className={`text-sm mt-1.5 leading-relaxed font-medium ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 {result.isExternalFetch
                   ? '해당 IP는 데이터베이스에 등록되어 있지 않습니다.'
                   : `총 ${result.uniqueSources}개의 독립된 곳에서 누적 ${result.totalReports}회 신고되었습니다.`}

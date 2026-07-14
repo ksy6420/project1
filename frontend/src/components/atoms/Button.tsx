@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -16,15 +17,19 @@ export function Button({
   isLoading = false,
   ...props
 }: ButtonProps) {
+  const { theme } = useTheme();
+
   const baseClass =
     'flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none cursor-pointer outline-none';
 
   const variantClass =
     variant === 'primary'
-      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500'
+      ? `bg-[#e74c3c] text-white shadow-lg shadow-[#e74c3c]/30 hover:bg-[#c0392b]`
       : variant === 'secondary'
-        ? 'bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700'
-        : 'bg-[#F97316] hover:bg-[#EA580C] text-white shadow-lg shadow-orange-500/10 border-none';
+        ? theme === 'dark'
+          ? 'bg-gray-800 text-gray-200 border border-gray-700 hover:bg-gray-700'
+          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+        : 'bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-lg shadow-[#e74c3c]/10 border-none';
 
   return (
     <button

@@ -36,41 +36,52 @@ export function IPSearchForm({
   };
 
   return (
-    <section className="bg-[#111827] rounded-xl border border-gray-800/90 px-4 py-3 shadow-xl">
+    <section
+      className="shadow-xl transition-colors overflow-hidden"
+      style={{
+        background: '#4e7e14',
+        borderTopLeftRadius: '.5em',
+        borderTopRightRadius: '.5em',
+        color: '#e3ecd8',
+        height: 'auto',
+        margin: '7px 0 0',
+        padding: '1em',
+      }}
+    >
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col sm:flex-row gap-3 items-stretch"
+        className="flex flex-col sm:flex-row gap-2 sm:gap-0 items-stretch sm:items-center"
       >
-        <div className="flex-1">
-          <InputField
-            label=""
-            icon={Search}
-            type="text"
-            value={ipInput}
-            onChange={(e) => setIpInput(e.target.value)}
-            placeholder="IP 주소 입력 (예: 1.1.1.1)"
-            required
-            error={error}
-          />
-        </div>
-
-        <div className="flex items-end">
+        <span
+          className="font-semibold text-base whitespace-nowrap self-center sm:mr-4"
+          style={{ color: '#e3ecd8' }}
+        >
+          Check an IP Address
+        </span>
+        <div className="flex items-center w-full">
+          <div className="flex-1 min-w-0">
+            <InputField
+              label=""
+              icon={Search}
+              type="text"
+              value={ipInput}
+              onChange={(e) => setIpInput(e.target.value)}
+              placeholder="IP 주소 입력 (예: 1.1.1.1)"
+              required
+              error={error}
+              className="!rounded-r-none !h-[40px] !pr-0 !border-r-0"
+            />
+          </div>
           <Button
             type="submit"
-            variant="orange"
+            variant="primary"
             disabled={isLoading}
-            className="w-full sm:w-auto h-[46px] px-8 hover:!bg-[#EA580C] !text-white !font-bold !rounded-lg !border-none transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2"
+            className="!h-[40px] !w-[70px] !shrink-0 !px-0 !bg-[#f97316] hover:!bg-[#ea580c] !text-white !font-bold !rounded-l-none !rounded-r-lg !border-none transition-all duration-200 active:scale-[0.98] flex items-center justify-center text-sm whitespace-nowrap"
           >
             {isLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>분석 중...</span>
-              </>
+              <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <Search className="w-4 h-4" />
-                <span>검색</span>
-              </>
+              <span>Check</span>
             )}
           </Button>
         </div>
