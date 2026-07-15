@@ -6,6 +6,20 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { useTheme } from '../context/ThemeContext';
 
+const getTodayString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const countryCodeToEmoji = (code: string): string => {
+  const upper = code.toUpperCase();
+  if (upper.length !== 2) return '';
+  return String.fromCodePoint(...upper.split('').map((c) => 127397 + c.charCodeAt(0)));
+};
+
 interface BlacklistItem {
   ip: string;
   abuseConfidenceScore?: number;
@@ -32,7 +46,7 @@ export function BlacklistPage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [dateValue, setDateValue] = useState(dateParam);
+  const [dateValue, setDateValue] = useState(dateParam || getTodayString());
   const [ipSearchValue, setIpSearchValue] = useState(ipParam);
   const [ipSearchResult, setIpSearchResult] = useState<{
     found: boolean;
@@ -40,6 +54,13 @@ export function BlacklistPage() {
   } | null>(null);
   const [ipSearchLoading, setIpSearchLoading] = useState(false);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (!dateParam) {
+      const params = `date=${getTodayString()}&page=1`;
+      navigate(`/blacklist?${params}`);
+    }
+  }, [dateParam, navigate]);
 
   useEffect(() => {
     if (!dateParam) return;
@@ -286,14 +307,15 @@ export function BlacklistPage() {
                   ref={(el) => {
                     itemRefs.current[item.ip] = el;
                   }}
-                  className={`px-2 py-2.5 rounded-md border font-mono text-center text-base transition-colors ${
+                  onClick={() => navigate(`/check?ip=${item.ip}`)}
+                  className={`flex items-center justify-center px-1.5 py-1.5 font-mono text-base cursor-pointer ${
                     ipParam === item.ip
                       ? theme === 'dark'
-                        ? 'bg-[#e74c3c]/20 border-[#e74c3c]/60 text-[#e74c3c]'
-                        : 'bg-[#e74c3c]/10 border-[#e74c3c]/40 text-[#c0392b]'
+                        ? 'text-[#e74c3c]'
+                        : 'text-[#c0392b]'
                       : theme === 'dark'
-                        ? 'bg-[#111827]/60 border-gray-700/40 text-gray-200 hover:border-gray-600/60'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                        ? 'text-gray-200'
+                        : 'text-gray-700'
                   }`}
                 >
                   {item.ip}

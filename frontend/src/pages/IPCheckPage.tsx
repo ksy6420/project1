@@ -48,21 +48,7 @@ export function IPCheckPage() {
   const [currentResult, setCurrentResult] = useState<IPMetadata | null>(null);
   const [rawData, setRawData] = useState<IpCheckResponse | null>(null);
   const [searchError, setSearchError] = useState('');
-  const [userIp, setUserIp] = useState('');
   const { theme } = useTheme();
-
-  useEffect(() => {
-    const fetchUserIp = async () => {
-      try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        setUserIp(data.ip);
-      } catch {
-        console.error('IP를 가져오지 못했습니다.');
-      }
-    };
-    fetchUserIp();
-  }, []);
 
   const fetchIp = async (ipToSearch: string) => {
     setIsLoading(true);
@@ -104,62 +90,68 @@ export function IPCheckPage() {
           : 'bg-gray-100 text-gray-900'
       }`}
     >
-      <main className="flex-1 px-4 md:px-8 py-8 w-2/3 mx-auto flex flex-col gap-8">
+      <main className="flex-1 px-4 md:px-8 py-8 w-2/3 mx-auto mt-[15px] flex flex-col">
         <IPSearchForm
           onSearch={fetchIp}
           isLoading={isLoading}
-          initialIp={searchParams.get('ip') || userIp}
+          defaultIp={searchParams.get('ip') || ''}
         />
 
-        {searchError && (
-          <div
-            className={`p-4 rounded-xl text-sm ${
-              theme === 'dark'
-                ? 'bg-red-500/10 border border-red-500/30 text-red-200'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}
-          >
-            {searchError}
-          </div>
-        )}
-
-        {currentResult ? (
-          <ScanResultView
-            result={currentResult}
-            rawData={rawData ?? undefined}
-          />
-        ) : (
-          <div
-            className={`flex flex-col items-center justify-center py-20 rounded-xl transition-colors ${
-              theme === 'dark'
-                ? 'border border-gray-800/40 bg-[#111827]/40'
-                : 'border border-gray-200 bg-white'
-            }`}
-          >
+        <div
+          className={`flex flex-col gap-6 p-6 transition-colors ${
+            theme === 'dark' ? 'bg-[#161D30]' : 'bg-white'
+          }`}
+        >
+          {searchError && (
             <div
-              className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${
+              className={`p-4 rounded-xl text-sm ${
                 theme === 'dark'
-                  ? 'bg-gray-800/40 text-gray-500 border border-gray-800/80'
-                  : 'bg-gray-100 text-gray-400 border border-gray-200'
-              }`}
-            ></div>
-            <h3
-              className={`text-base font-bold ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                  ? 'bg-red-500/10 border border-red-500/30 text-red-200'
+                  : 'bg-red-50 border border-red-200 text-red-700'
               }`}
             >
-              데이터가 없습니다
-            </h3>
-            <p
-              className={`text-xs mt-1 max-w-sm text-center leading-relaxed ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              {searchError}
+            </div>
+          )}
+
+          {currentResult ? (
+            <ScanResultView
+              result={currentResult}
+              rawData={rawData ?? undefined}
+            />
+          ) : (
+            <div
+              className={`flex flex-col items-center justify-center py-20 rounded-xl transition-colors ${
+                theme === 'dark'
+                  ? 'border border-gray-800/40 bg-[#111827]/40'
+                  : 'border border-gray-200 bg-white'
               }`}
             >
-              조사하려는 의심스러운 IP 주소를 상단 검색창에 입력하고 검색 버튼을
-              클릭하시면 실시간 위협 보고서 정보가 이곳에 활성화됩니다.
-            </p>
-          </div>
-        )}
+              <div
+                className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-gray-800/40 text-gray-500 border border-gray-800/80'
+                    : 'bg-gray-100 text-gray-400 border border-gray-200'
+                }`}
+              ></div>
+              <h3
+                className={`text-base font-bold ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                }`}
+              >
+                데이터가 없습니다
+              </h3>
+              <p
+                className={`text-xs mt-1 max-w-sm text-center leading-relaxed ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}
+              >
+                조사하려는 의심스러운 IP 주소를 상단 검색창에 입력하고 검색
+                버튼을 클릭하시면 실시간 위협 보고서 정보가 이곳에 활성화됩니다.
+              </p>
+            </div>
+          )}
+        </div>
       </main>
 
       <Footer />

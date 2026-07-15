@@ -1,6 +1,8 @@
 import type { Report } from '../../types/threat';
 import { useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import CountryFlag from '../CountryFlag';
+import { CATEGORY_MAP } from '../../constants/categories';
 
 interface ReportListProps {
   reports: Report[];
@@ -19,32 +21,6 @@ function countryName(code: string | undefined): string {
     return code;
   }
 }
-
-const CATEGORY_MAP: Record<number, string> = {
-  1: 'DNS Compromise',
-  2: 'DNS Poisoning',
-  3: 'Fraud Orders',
-  4: 'DDoS Attack',
-  5: 'FTP Brute-Force',
-  6: 'Ping of Death',
-  7: 'Phishing',
-  8: 'Fraud VoIP',
-  9: 'Open Proxy',
-  10: 'Web Spam',
-  11: 'Email Spam',
-  12: 'Blog Spam',
-  13: 'VPN IP',
-  14: 'Port Scan',
-  15: 'Hacking',
-  16: 'SQL Injection',
-  17: 'Spoofing',
-  18: 'Brute-Force',
-  19: 'Bad Web Bot',
-  20: 'Exploited Host',
-  21: 'Web App Attack',
-  22: 'SSH',
-  23: 'IoT Targeted',
-};
 
 export function ReportList({ reports }: ReportListProps) {
   const [reportPage, setReportPage] = useState(1);
@@ -124,6 +100,7 @@ export function ReportList({ reports }: ReportListProps) {
             >
               <div className="flex items-start gap-5">
                 <div className="flex items-center gap-2 w-36 shrink-0">
+                  <CountryFlag countryCode={r.reporterCountryCode || ''} className="text-lg" />
                   <span
                     className={`text-base font-semibold truncate ${
                       theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
@@ -160,7 +137,7 @@ export function ReportList({ reports }: ReportListProps) {
                 </div>
                 <div className="w-72 shrink-0 pt-0.5">
                   <div className="flex flex-wrap gap-2">
-                    {r.categories?.map((c: number) => (
+                    {(r.categoryIds || r.categories || []).map((c: number) => (
                       <span
                         key={c}
                         className={`inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-sm ${

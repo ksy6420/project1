@@ -19,6 +19,7 @@ export interface Report {
   reportedAt?: string;
   comment?: string;
   categories?: number[];
+  categoryIds?: number[];
 }
 
 export interface ScanHistory {

@@ -6,16 +6,25 @@ import { Search, RefreshCw } from 'lucide-react';
 interface IPSearchFormProps {
   onSearch: (ip: string) => void;
   isLoading: boolean;
-  initialIp?: string;
+  defaultIp?: string;
+  variant?: 'full' | 'inline';
 }
 
 export function IPSearchForm({
   onSearch,
   isLoading,
-  initialIp = '',
+  defaultIp = '',
+  variant = 'full',
 }: IPSearchFormProps) {
-  const [ipInput, setIpInput] = useState(initialIp);
+  const [ipInput, setIpInput] = useState(defaultIp);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
+
+  const handleFocus = () => {
+    setFocused(true);
+    setIpInput('');
+    setError('');
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -35,7 +44,41 @@ export function IPSearchForm({
     onSearch(ipInput.trim());
   };
 
-  return (
+  const renderInline = () => (
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center gap-2 w-full max-w-md"
+    >
+      <div className="flex-1 min-w-0">
+        <InputField
+          label=""
+          icon={Search}
+          type="text"
+          value={ipInput}
+          onChange={(e) => setIpInput(e.target.value)}
+          onFocus={handleFocus}
+          placeholder=""
+          required
+          error={error}
+          className="!h-[40px]"
+        />
+      </div>
+      <Button
+        type="submit"
+        variant="primary"
+        disabled={isLoading}
+        className="!h-[40px] !w-[70px] !shrink-0 !px-0 !bg-[#f97316] hover:!bg-[#ea580c] !text-white !font-bold !rounded-lg !border-none transition-all duration-200 active:scale-[0.98] flex items-center justify-center text-sm whitespace-nowrap"
+      >
+        {isLoading ? (
+          <RefreshCw className="w-4 h-4 animate-spin" />
+        ) : (
+          <span>Check</span>
+        )}
+      </Button>
+    </form>
+  );
+
+  const renderFull = () => (
     <section
       className="shadow-xl transition-colors overflow-hidden"
       style={{
@@ -66,7 +109,8 @@ export function IPSearchForm({
               type="text"
               value={ipInput}
               onChange={(e) => setIpInput(e.target.value)}
-              placeholder="IP 주소 입력 (예: 1.1.1.1)"
+              onFocus={handleFocus}
+              placeholder={focused ? defaultIp : 'IP 주소 입력 (예: 1.1.1.1)'}
               required
               error={error}
               className="!rounded-r-none !h-[40px] !pr-0 !border-r-0"
@@ -88,4 +132,6 @@ export function IPSearchForm({
       </form>
     </section>
   );
+
+  return variant === 'inline' ? renderInline() : renderFull();
 }

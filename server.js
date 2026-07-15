@@ -6,8 +6,9 @@ const mysql = require('mysql2/promise');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const bcrypt = require('bcryptjs'); // 비밀번호 해싱을 위한 bcrypt 모듈
+const bcrypt = require('bcryptjs');
 const path = require('path');
+const whois = require('whois');
 
 const {
   checkIpFromLocalDb,
@@ -60,6 +61,81 @@ const pool = mysql.createPool({
   queueLimit: 0,
   connectTimeout: 5000,
 });
+
+const whoisCache = new Map();
+const WHOIS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+function parseWhoisData(data) {
+  if (!data) return {};
+
+  const result = {};
+  const lines = data.split('\n');
+
+  for (const line of lines) {
+    const match = line.match(/^([^:]+):\s*(.+)$/);
+    if (match) {
+      const key = match[1].trim().toLowerCase().replace(/\s+/g, '_');
+      const value = match[2].trim();
+      if (value && !result[key]) {
+        result[key] = value;
+      }
+    }
+  }
+
+  const networkRange =
+    result['inetnum'] || result['range'] || result['netrange'] || '';
+  const country = result['country'] || '';
+  const netname = result['netname'] || '';
+  const orgName =
+    result['org_name'] || result['organization'] || result['orgname'] || '';
+  const registrar = result['registrar'] || '';
+  const registeredDate =
+    result['created'] ||
+    result['registration_date'] ||
+    result['referral_date'] ||
+    '';
+  const updatedDate = result['updated'] || result['last_modified'] || '';
+  const status = result['status'] || '';
+  const abuseContact =
+    result['abuse_contact'] || result['abuse_email'] || result['e-mail'] || '';
+
+  return {
+    networkRange,
+    country,
+    netname,
+    orgName,
+    registrar,
+    registeredDate,
+    updatedDate,
+    status,
+    abuseContact,
+    raw: data,
+  };
+}
+
+function lookupCountryByWhois(ip) {
+  return new Promise((resolve) => {
+    const cached = whoisCache.get(ip);
+    if (cached && Date.now() - cached.time < WHOIS_CACHE_TTL) {
+      return resolve(cached.country);
+    }
+
+    whois.lookup(ip, { timeout: 5000 }, (err, data) => {
+      if (err) {
+        return resolve('');
+      }
+      let country = '';
+      if (data) {
+        const match = data.match(/Country:\s*(\S+)/i);
+        if (match) {
+          country = match[1].toUpperCase();
+        }
+      }
+      whoisCache.set(ip, { country, time: Date.now() });
+      resolve(country);
+    });
+  });
+}
 
 async function testDBConnection() {
   try {
@@ -289,8 +365,7 @@ const swaggerSpec = {
     '/api/v2/ip/history': {
       get: {
         summary: 'IP 검색 이력 날짜별 조회',
-        description:
-          '특정 날짜의 IP 검색 이력을 조회합니다.',
+        description: '특정 날짜의 IP 검색 이력을 조회합니다.',
         tags: ['IP History'],
         parameters: [
           {
@@ -615,6 +690,73 @@ app.post('/api/v2/auth/logout', async (req, res) => {
   }
 });
 
+// IP 국가 코드 조회 (GET /api/v2/ip/country?ip=1.1.1.1)
+app.get('/api/v2/ip/country', async (req, res) => {
+  const ip = req.query.ip;
+
+  if (!ip) {
+    return res.status(400).json({ message: 'IP 주소를 입력해주세요.' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT JSON_UNQUOTE(JSON_EXTRACT(json_data, '$.countryCode')) as countryCode FROM ip_abuse_json WHERE ip_address = ? LIMIT 1",
+      [ip],
+    );
+
+    if (rows.length > 0 && rows[0].countryCode) {
+      return res.json({ countryCode: rows[0].countryCode });
+    }
+
+    return res.json({ countryCode: '' });
+  } catch (error) {
+    console.error('[Country Code Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// WHOIS 조회 (GET /api/v2/ip/whois?ip=1.1.1.1)
+app.get('/api/v2/ip/whois', async (req, res) => {
+  const ip = req.query.ip;
+
+  if (!ip) {
+    return res.status(400).json({ message: 'IP 주소를 입력해주세요.' });
+  }
+
+  try {
+    const cached = whoisCache.get(ip);
+    if (
+      cached &&
+      cached.whoisData &&
+      Date.now() - cached.time < WHOIS_CACHE_TTL
+    ) {
+      return res.json({ data: cached.whoisData });
+    }
+
+    const data = await new Promise((resolve, reject) => {
+      whois.lookup(ip, { timeout: 10000 }, (err, result) => {
+        if (err) reject(err);
+        else resolve(result || '');
+      });
+    });
+
+    const parsed = parseWhoisData(data);
+
+    whoisCache.set(ip, {
+      country: parsed.country || '',
+      whoisData: parsed,
+      time: Date.now(),
+    });
+
+    return res.json({ data: parsed });
+  } catch (error) {
+    console.error('[WHOIS Error]:', error.message);
+    return res
+      .status(500)
+      .json({ message: 'WHOIS 조회 중 오류가 발생했습니다.' });
+  }
+});
+
 // IP 위협 정보 조회 (GET /api/v2/ip/check?ip=1.1.1.1)
 app.get('/api/v2/ip/check', async (req, res) => {
   const ip = req.query.ip;
@@ -687,6 +829,186 @@ app.get('/api/v2/ip/blacklist/search', async (req, res) => {
   }
 });
 
+// 랜덤 블랙리스트 IP 조회 (GET /api/v2/ip/blacklist/random?limit=20)
+app.get('/api/v2/ip/blacklist/random', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 20;
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    const [rows] = await pool.query(
+      'SELECT ip_address, json_data FROM blacklist_daily WHERE snapshot_date = ? ORDER BY RAND() LIMIT ?',
+      [dateStr, limit],
+    );
+
+    const result = rows.map((row) => {
+      const jsonData =
+        typeof row.json_data === 'string'
+          ? JSON.parse(row.json_data)
+          : row.json_data;
+      return {
+        ip: row.ip_address,
+        country: jsonData?.countryCode || jsonData?.country || 'Unknown',
+      };
+    });
+
+    return res.json({ data: result });
+  } catch (error) {
+    console.error('[Blacklist Random Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// 최근 신고된 IP 랜덤 조회 (GET /api/v2/ip/reported/recent?limit=20)
+app.get('/api/v2/ip/reported/recent', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 20;
+  try {
+    const sampleSize = Math.min(limit * 5, 200);
+    const [rows] = await pool.query(
+      `SELECT ip_address, json_data 
+       FROM ip_abuse_json 
+       ORDER BY ip_address DESC 
+       LIMIT ?`,
+      [sampleSize],
+    );
+
+    const parsed = [];
+    for (const row of rows) {
+      try {
+        const jd =
+          typeof row.json_data === 'string'
+            ? JSON.parse(row.json_data)
+            : row.json_data;
+        if (jd?.lastReportedAt) {
+          parsed.push({
+            ip: row.ip_address,
+            countryCode: jd.countryCode || '',
+            lastReportedAt: jd.lastReportedAt,
+          });
+        }
+      } catch {
+        /* skip */
+      }
+    }
+
+    parsed.sort(
+      (a, b) => new Date(b.lastReportedAt) - new Date(a.lastReportedAt),
+    );
+
+    for (let i = parsed.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [parsed[i], parsed[j]] = [parsed[j], parsed[i]];
+    }
+
+    const result = parsed
+      .slice(0, limit)
+      .map((r) => ({ ip: r.ip, countryCode: r.countryCode }));
+
+    return res.json({ data: result });
+  } catch (error) {
+    console.error('[Recent Reported Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// 최근 신고된 IP 조회 (GET /api/v2/ip/recent?limit=20)
+app.get('/api/v2/ip/recent', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 20;
+  try {
+    const [rows] = await pool.query(
+      'SELECT ip_address, json_data, checked_at FROM ip_check_history ORDER BY checked_at DESC LIMIT ?',
+      [limit],
+    );
+
+    const result = rows.map((row) => {
+      const jsonData =
+        typeof row.json_data === 'string'
+          ? JSON.parse(row.json_data)
+          : row.json_data;
+      return {
+        ip: row.ip_address,
+        country: jsonData?.countryCode || jsonData?.country || 'Unknown',
+        checkedAt: row.checked_at,
+      };
+    });
+
+    return res.json({ data: result });
+  } catch (error) {
+    console.error('[Recent IP Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// IP 신고 저장 (POST /api/v2/ip/report)
+app.post('/api/v2/ip/report', async (req, res) => {
+  const { ip, categories, comment } = req.body;
+
+  if (!ip || !categories || categories.length === 0) {
+    return res
+      .status(400)
+      .json({ message: 'IP 주소와 카테고리는 필수입니다.' });
+  }
+
+  try {
+    const categoryIds = Array.isArray(categories) ? categories : [categories];
+
+    const reporterIp =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.socket.remoteAddress ||
+      '';
+    const reporterCountryCode = await lookupCountryByWhois(reporterIp);
+
+    const [result] = await pool.query(
+      'INSERT INTO ip_reports (ip_address, category_ids, comment, country_code) VALUES (?, ?, ?, ?)',
+      [ip, JSON.stringify(categoryIds), comment || '', reporterCountryCode],
+    );
+
+    return res.json({
+      message: '신고가 접수되었습니다.',
+      id: result.insertId,
+    });
+  } catch (error) {
+    console.error('[Report Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+// 최근 신고된 IP 조회 (GET /api/v2/ip/reports?limit=20)
+app.get('/api/v2/ip/reports', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 20;
+  try {
+    const [rows] = await pool.query(
+      'SELECT ip_address, category_ids, comment, reported_at, country_code FROM ip_reports ORDER BY reported_at DESC LIMIT ?',
+      [limit],
+    );
+
+    const result = rows.map((row) => {
+      let categoryIds = [];
+      try {
+        categoryIds =
+          typeof row.category_ids === 'string'
+            ? JSON.parse(row.category_ids)
+            : row.category_ids;
+      } catch {
+        /* fallback */
+      }
+
+      return {
+        ip: row.ip_address,
+        categoryIds: categoryIds,
+        comment: row.comment,
+        reportedAt: row.reported_at,
+        countryCode: row.country_code || '',
+      };
+    });
+
+    return res.json({ data: result });
+  } catch (error) {
+    console.error('[Reports Error]:', error.message);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 // 프론트엔드 정적 파일 serving
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 
@@ -699,10 +1021,30 @@ app.get('/{*splat}', (req, res) => {
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+async function ensureReportTable(pool) {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ip_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ip_address VARCHAR(45) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        comment TEXT,
+        reported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ip_address (ip_address),
+        INDEX idx_reported_at (reported_at)
+      )
+    `);
+    console.log('[DB] ip_reports 테이블 준비 완료');
+  } catch (err) {
+    console.error('[DB] ip_reports 테이블 생성 실패:', err.message);
+  }
+}
+
 testDBConnection().then(async () => {
   await ensureHistoryTable(pool);
   await ensureBlacklistTable(pool);
   await ensureBlacklistDailyTable(pool);
+  await ensureReportTable(pool);
 
   app.listen(PORT, HOST, () => {
     console.log(`[Server] ${HOST}:${PORT}에서 실행 중`);
@@ -718,7 +1060,9 @@ async function catchUpMissingBlacklistDays(pool) {
     for (let i = 0; i < 3; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+      dates.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      );
     }
     for (const dateStr of dates) {
       const [[{ cnt }]] = await pool.query(
@@ -728,7 +1072,8 @@ async function catchUpMissingBlacklistDays(pool) {
       if (cnt === 0) {
         console.log('[Blacklist] ' + dateStr + ' 데이터 없음 → 패치 시도');
         const result = await fetchDailyBlacklistForDate(pool, dateStr);
-        if (result > 0) console.log('[Blacklist] ' + dateStr + ' ' + result + '개 저장 완료');
+        if (result > 0)
+          console.log('[Blacklist] ' + dateStr + ' ' + result + '개 저장 완료');
       }
     }
   } catch (err) {
@@ -740,11 +1085,17 @@ async function fetchDailyBlacklistForDate(pool, dateStr) {
   const apiKey = process.env.ABUSEIPDB_API_KEY;
   if (!apiKey) return 0;
   try {
-    const response = await axios.get('https://api.abuseipdb.com/api/v2/blacklist', {
-      params: { confidenceMinimum: 25, limit: parseInt(process.env.BLACKLIST_LIMIT, 10) || 500000 },
-      headers: { Key: apiKey, Accept: 'application/json' },
-      timeout: 30000,
-    });
+    const response = await axios.get(
+      'https://api.abuseipdb.com/api/v2/blacklist',
+      {
+        params: {
+          confidenceMinimum: 25,
+          limit: parseInt(process.env.BLACKLIST_LIMIT, 10) || 500000,
+        },
+        headers: { Key: apiKey, Accept: 'application/json' },
+        timeout: 30000,
+      },
+    );
     const { data } = response.data;
     if (!data || data.length === 0) return 0;
     const placeholders = data.map(() => '(?, ?, ?)').join(',');
@@ -753,7 +1104,8 @@ async function fetchDailyBlacklistForDate(pool, dateStr) {
       flat.push(dateStr, item.ipAddress, JSON.stringify(item));
     }
     await pool.query(
-      'INSERT IGNORE INTO blacklist_daily (snapshot_date, ip_address, json_data) VALUES ' + placeholders,
+      'INSERT IGNORE INTO blacklist_daily (snapshot_date, ip_address, json_data) VALUES ' +
+        placeholders,
       flat,
     );
     return data.length;

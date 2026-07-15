@@ -1,4 +1,5 @@
 import { useTheme } from '../../context/ThemeContext';
+import CountryFlag from '../CountryFlag';
 
 type RawData = Record<string, unknown>;
 
@@ -7,22 +8,22 @@ interface MetadataTableProps {
 }
 
 const LABEL_MAP: Record<string, string> = {
-  ipAddress: 'IP 주소',
-  domain: '도메인',
-  hostnames: '호스트명',
-  isWhitelisted: '화이트리스트',
-  abuseConfidenceScore: '악용 신뢰도',
-  totalReports: '총 신고 횟수',
-  numDistinctUsers: '신고자 수',
-  countryName: '국가',
-  countryCode: '국가 코드',
-  usageType: '사용 유형',
+  ipAddress: 'IP Address',
+  domain: 'Domain Name',
+  hostnames: 'Hostname(s)',
+  isWhitelisted: 'Whitelisted',
+  abuseConfidenceScore: 'Abuse Confidence Score',
+  totalReports: 'Total Reports',
+  numDistinctUsers: 'Unique Reporters',
+  countryName: 'Country',
+  countryCode: 'Country Code',
+  usageType: 'Usage Type',
   isp: 'ISP',
-  lastReportedAt: '최종 보고일',
-  requestTime: 'API 요청 시간',
-  isPublic: '공개 IP',
-  isTor: 'Tor 노드',
-  ipVersion: 'IP 버전',
+  lastReportedAt: 'Last Report Time',
+  requestTime: 'API Request Time',
+  isPublic: 'Public IP',
+  isTor: 'Tor Node',
+  ipVersion: 'IP Version',
 };
 
 const UNIT_MAP: Record<string, string> = {
@@ -48,10 +49,13 @@ export function MetadataTable({ rawData }: MetadataTableProps) {
     ? (Object.entries(rawData) as [string, unknown][])
         .filter(([key]) => key !== 'reports' && LABEL_MAP[key])
         .map(([key, value]) => ({
+          key,
           label: LABEL_MAP[key] || key,
           value: formatValue(key, value),
         }))
     : [];
+
+  const countryCode = rawData?.countryCode as string | undefined;
 
   return (
     <div>
@@ -60,20 +64,29 @@ export function MetadataTable({ rawData }: MetadataTableProps) {
           <div
             key={index}
             className={`py-2.5 flex items-center justify-between gap-3 border-b transition-colors ${
-              theme === 'dark'
-                ? 'border-gray-800/60'
-                : 'border-gray-200'
+              theme === 'dark' ? 'border-gray-800/60' : 'border-gray-200'
             }`}
           >
-            <span className={`text-sm font-medium shrink-0 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            }`}>
+            <span
+              className={`font-semibold font-medium shrink-0 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-black'
+              }`}
+            >
               {row.label}
             </span>
-            <span className={`text-sm font-semibold text-right break-all ml-auto ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              {row.value}
+            <span
+              className={`text-right break-all ml-auto ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}
+            >
+              {row.key === 'countryName' && countryCode ? (
+                <span className="flex items-center gap-2">
+                  <CountryFlag countryCode={countryCode} className="shrink-0" />
+                  {row.value}
+                </span>
+              ) : (
+                row.value
+              )}
             </span>
           </div>
         ))}

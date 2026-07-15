@@ -53,11 +53,11 @@ export function InputField({
           placeholder={placeholder}
           className={`w-full py-3 ${Icon ? 'pl-10' : 'pl-4'} pr-4 rounded-lg text-sm transition-all outline-none ${
             theme === 'dark'
-              ? 'bg-[#161b26] border border-gray-700 text-gray-100 placeholder-gray-500 focus:border-[#e74c3c] focus:ring-3 focus:ring-[#e74c3c]/20'
-              : 'bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:border-[#e74c3c] focus:ring-3 focus:ring-[#e74c3c]/20'
+              ? 'bg-[#161b26] border border-gray-700 text-gray-100 placeholder-gray-500'
+              : 'bg-white border border-gray-300 text-gray-700 placeholder-gray-400'
           } ${
             error
-              ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+              ? 'border-red-500'
               : ''
           } ${className}`}
           {...props}

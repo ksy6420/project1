@@ -16,20 +16,15 @@ export function GaugeBar({ score }: GaugeBarProps) {
 
   return (
     <div>
-      <div className={`w-full rounded-full h-3 overflow-hidden mb-1.5 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-200'
-      }`}>
+      <div className={`w-full h-8 overflow-hidden ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-200'} relative`}>
         <div
-          className={`h-full transition-all duration-1000 rounded-full ${barColor}`}
+          className={`h-full transition-all duration-1000 ${barColor} flex items-center justify-center`}
           style={{ width: `${score}%` }}
-        />
-      </div>
-      <div className={`flex justify-between w-full text-xs font-medium ${
-        theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-      }`}>
-        <span>0% (Safe)</span>
-        <span>50%</span>
-        <span>100% (High Danger)</span>
+        >
+          <span className="text-white font-bold text-base drop-shadow-lg">
+            {score}%
+          </span>
+        </div>
       </div>
     </div>
   );

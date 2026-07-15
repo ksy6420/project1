@@ -25,7 +25,6 @@ export function Nav() {
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
-    { label: 'IP Check', path: '/ip-check' },
     { label: 'Blacklist', path: '/blacklist' },
     { label: 'Report IP', path: '/report' },
     { label: 'API Key', path: '/register-api' },

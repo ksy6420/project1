@@ -1,32 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { useTheme } from '../context/ThemeContext';
 import { FileWarning, Send } from 'lucide-react';
 import { API_BASE_URL } from '../config';
-
-const CATEGORIES = [
-  '스팸',
-  '브루트포스',
-  '스캔',
-  'DDoS',
-  '멀웨어',
-  '피싱',
-  '기타',
-];
+import { CATEGORY_MAP } from '../constants/categories';
 
 export function ReportPage() {
   const { theme } = useTheme();
+  const [searchParams] = useSearchParams();
   const [ip, setIp] = useState('');
-  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<number[]>([]);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  useEffect(() => {
+    const ipFromUrl = searchParams.get('ip');
+    if (ipFromUrl) {
+      setIp(ipFromUrl);
+    }
+  }, [searchParams.get('ip')]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ip || !category) {
+    if (!ip || categories.length === 0) {
       setMessage('IP 주소와 카테고리를 입력해주세요.');
       setIsSuccess(false);
       return;
@@ -39,7 +39,7 @@ export function ReportPage() {
       const res = await fetch(`${API_BASE_URL}/ip/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip, category, comment }),
+        body: JSON.stringify({ ip, categories, comment }),
       });
 
       const data = await res.json();
@@ -48,7 +48,7 @@ export function ReportPage() {
         setMessage('신고가 접수되었습니다. 감사합니다.');
         setIsSuccess(true);
         setIp('');
-        setCategory('');
+        setCategories([]);
         setComment('');
       } else {
         setMessage(data.message || '신고 중 오류가 발생했습니다.');
@@ -107,13 +107,13 @@ export function ReportPage() {
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
-                IP 주소
+                IP Address(ex 8.8.8.8)
               </label>
               <input
                 type="text"
                 value={ip}
                 onChange={(e) => setIp(e.target.value)}
-                placeholder="신고할 IP 주소를 입력하세요 (예: 1.2.3.4)"
+                placeholder="IP Address"
                 className={`w-full px-4 py-3 rounded-lg border transition-colors ${
                   theme === 'dark'
                     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-red-500'
@@ -128,24 +128,50 @@ export function ReportPage() {
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
-                카테고리
+                Categories(at least one is required)
               </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 border-gray-700 text-gray-900 focus:border-red-500'
-                    : 'bg-white border-gray-300 text-black focus:border-red-500'
-                } focus:outline-none focus:ring-2 focus:ring-red-500/20`}
-              >
-                <option value="">카테고리를 선택하세요</option>
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {Object.entries(CATEGORY_MAP).map(([id, name]) => {
+                  const numId = Number(id);
+                  const selected = categories.includes(numId);
+                  return (
+                    <label
+                      key={numId}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-all ${
+                        selected
+                          ? 'bg-[#e74c3c]/10 border-[#e74c3c]'
+                          : theme === 'dark'
+                            ? 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                            : 'bg-gray-50 border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() =>
+                          setCategories((prev) =>
+                            selected
+                              ? prev.filter((c) => c !== numId)
+                              : [...prev, numId]
+                          )
+                        }
+                        className="w-4 h-4 rounded accent-[#e74c3c]"
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          selected
+                            ? 'text-[#e74c3c]'
+                            : theme === 'dark'
+                              ? 'text-gray-300'
+                              : 'text-gray-700'
+                        }`}
+                      >
+                        {name}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div>
@@ -154,7 +180,7 @@ export function ReportPage() {
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                 }`}
               >
-                코멘트 (선택사항)
+                Comment
               </label>
               <textarea
                 value={comment}
